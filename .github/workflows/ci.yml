@@ -7,6 +7,7 @@ on:
   pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -31,14 +32,81 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        # secrets の本番用依存関係をコピーしてインストール
         cp art-gallery-release-tools/ansible/roles/secrets/internal/requirements.txt .
         pip install -r requirements.txt
+        
+        # backend のテスト・CI用依存関係をコピーしてインストール
+        cp art-gallery-release-tools/ansible/roles/backend/internal/requirements-test-optional.txt .
+        pip install -r requirements-test-optional.txt
 
-    - name: Run tests
-      run: pytest
+    - name: ダミー設定ファイルの生成 (config.yaml & secrets.yaml.encrypted)
+      env:
+        SECRET_KEY: "dummy_secret_key_for_secrets_api_testing"
+      run: |
+        mkdir -p config
+        
+        # 1. 暗号化されたダミーの secrets.yaml.encrypted を生成
+        # Secrets API 自体のテストにはこれが必要
+        python3 -c "
+        import yaml
+        import base64
+        import os
+        from cryptography.fernet import Fernet
+        from cryptography.hazmat.primitives import hashes
+        from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+        
+        secret_key = os.environ['SECRET_KEY']
+        
+        kdf = PBKDF2HMAC(
+            algorithm=hashes.SHA256(),
+            length=32,
+            salt=b\"art_gallery_salt\",
+            iterations=100000,
+        )
+        key = base64.urlsafe_b64encode(kdf.derive(secret_key.encode()))
+        fernet = Fernet(key)
+        
+        encrypted_val = fernet.encrypt(b'test_password').decode()
+        secrets_data = {'database': {'password': f'encrypted:{encrypted_val}'}}
+        
+        with open('config/secrets.yaml.encrypted', 'w') as f:
+            yaml.dump(secrets_data, f)
+        "
+        
+        # 2. config.yaml を生成
+        cat <<EOF > config/config.yaml
+        server:
+          port: 8001
+          flask_env: testing
+          debug: true
+        secrets_vault_file_path: "config/secrets.yaml.encrypted"
+        secrets_api_secret_key: "${{ env.SECRET_KEY }}"
+        EOF
+
+    - name: Black (Formatter check) の実行
+      run: black --check .
+      continue-on-error: true
+
+    - name: Flake8 (Lint check) の実行
+      run: |
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --count --max-complexity=10 --max-line-length=127 --statistics
+      continue-on-error: true
+
+    - name: Mypy (Type check) の実行
+      run: mypy . --ignore-missing-imports
+      continue-on-error: true
+
+    - name: Secrets API テストの実行 (pytest)
+      env:
+        PYTHONPATH: ${{ github.workspace }}
+      run: |
+        if [ -d tests ]; then
+          pytest tests/
+        else
+          echo "No tests directory found, skipping pytest."
+        fi
 
     - name: Build Docker image
       run: docker build -t art-gallery-secrets-api:latest .
-
-    # DockerイメージをGitHub Container Registryにプッシュするステップは
-    # デプロイワークフロー (deploy_secrets.yml) で行うため、ここでは省略

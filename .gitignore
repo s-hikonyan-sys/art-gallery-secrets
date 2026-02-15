@@ -1,0 +1,11 @@
+__pycache__/
+.pytest_cache/
+venv/
+.env
+*.log
+# テストカバレッジレポート
+htmlcov/
+.coverage
+# 生成される設定ファイルは無視設定にする
+config/config.yaml
+config/secrets.yaml.encrypted
