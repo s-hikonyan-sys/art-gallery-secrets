@@ -16,6 +16,30 @@ BACKEND_TOKEN_FILE = TOKENS_DIR / "backend_token.txt"
 DATABASE_TOKEN_FILE = TOKENS_DIR / "database_token.txt"
 LOG_DIR = Path("/app/logs")
 
+
+# --- カスタム例外クラス (backend/app.py に準拠) ---
+class APIError(Exception):
+    """API関連のエラーに対するカスタム例外."""
+    def __init__(self, message: str, status_code: int = 500) -> None:
+        super().__init__(message)
+        self.message = message
+        self.status_code = status_code
+
+class UnauthorizedError(APIError):
+    """認証エラーに対するカスタム例外."""
+    def __init__(self, message: str = "Unauthorized") -> None:
+        super().__init__(message, 401)
+
+class ServiceMisconfiguredError(APIError):
+    """サービス設定エラーに対するカスタム例外."""
+    def __init__(self, message: str = "Service is misconfigured") -> None:
+        super().__init__(message, 500)
+
+class PasswordNotFoundError(APIError):
+    """パスワードが見つからないエラーに対するカスタム例外."""
+    def __init__(self, message: str = "Password not found") -> None:
+        super().__init__(message, 404)
+
 def create_app() -> Flask:
     """
     Flaskアプリケーションのファクトリ関数 (backend/app.py に準拠).
