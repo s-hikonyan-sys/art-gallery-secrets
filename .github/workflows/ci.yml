@@ -81,6 +81,7 @@ jobs:
           flask_env: testing
           debug: true
         secrets_vault_file_path: "config/secrets.yaml.encrypted"
+        secret_key: "${{ env.SECRET_KEY }}" # backendの当時の実装に合わせる
         secrets_api_secret_key: "${{ env.SECRET_KEY }}"
         EOF
 
