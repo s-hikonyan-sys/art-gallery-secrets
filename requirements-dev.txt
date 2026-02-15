@@ -1,21 +1,13 @@
-# Backend development dependencies
-# Static analysis and code quality tools
-
-# Linting
+# Secrets API development dependencies
 flake8>=6.0.0
 pylint>=2.17.0
 mypy>=1.5.0
-
-# Code formatting
 black>=23.0.0
 isort>=5.12.0
-
-# Type checking
+pytest>=7.4.0
+pytest-cov>=4.1.0
+requests>=2.31.0
 types-requests>=2.31.0
 types-PyYAML>=6.0.0
-
-# Security
 bandit>=1.7.5
-
-# Documentation
 pydocstyle>=6.3.0

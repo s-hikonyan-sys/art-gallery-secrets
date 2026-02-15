@@ -9,8 +9,7 @@ exclude =
     build,
     dist,
     *.egg-info,
-    migrations,
-    internal
+    migrations
 ignore =
     E203,
     E501,
