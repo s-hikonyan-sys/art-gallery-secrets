@@ -40,6 +40,12 @@ jobs:
         cp art-gallery-release-tools/ansible/roles/backend/internal/requirements-test-optional.txt .
         pip install -r requirements-test-optional.txt
 
+    - name: 必要なディレクトリの作成 (権限付与)
+      run: |
+        # アプリが /app/tokens を使用するため、CI環境上にも作成し権限を付与する
+        sudo mkdir -p /app/tokens
+        sudo chmod -R 777 /app
+
     - name: ダミー設定ファイルの生成 (config.yaml & secrets.yaml.encrypted)
       env:
         SECRET_KEY: "dummy_secret_key_for_secrets_api_testing"

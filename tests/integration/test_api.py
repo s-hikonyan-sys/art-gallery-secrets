@@ -5,8 +5,7 @@ from pathlib import Path
 import os
 
 # Flaskアプリケーションとカスタム例外をインポート
-# sys.path.append()はテスト環境では不要な場合が多いが、必要に応じて調整
-from app.main import app, AUTH_TOKEN_FILE, APIError, UnauthorizedError, ServiceMisconfiguredError, PasswordNotFoundError
+from app import app, BACKEND_TOKEN_FILE, APIError, UnauthorizedError, ServiceMisconfiguredError, PasswordNotFoundError
 
 @pytest.fixture
 def client():
@@ -19,7 +18,7 @@ def mock_auth_token_file(tmp_path):
     # テスト用に一時的なauth_tokenファイルを作成
     auth_file = tmp_path / "auth_token.txt"
     auth_file.write_text("test_auth_token")
-    with patch('app.main.AUTH_TOKEN_FILE', auth_file):
+    with patch('app.BACKEND_TOKEN_FILE', auth_file):
         yield auth_file
 
 @pytest.fixture
@@ -44,7 +43,7 @@ def setup_config_for_decryption(tmp_path):
     with (
         patch('app.config.CONFIG_FILE', mock_config_path),
         patch('app.config.SECRETS_FILE', mock_secrets_path),
-        patch('app.main.AUTH_TOKEN_FILE', mock_auth_token_path),
+        patch('app.BACKEND_TOKEN_FILE', mock_auth_token_path),
         patch('app.config.SecretManager') as MockSecretManager
     ):
         # SecretManager.decryptの戻り値をモック
@@ -86,7 +85,7 @@ def test_get_database_password_success(client, mock_auth_token_file, setup_confi
 
 def test_get_database_password_file_read_error(client, mock_auth_token_file, setup_config_for_decryption):
     # auth_token.txtの読み込みに失敗するケースをモック
-    with patch('app.main.AUTH_TOKEN_FILE.read_text', side_effect=IOError("Permission denied")):
+    with patch('app.main.BACKEND_TOKEN_FILE.read_text', side_effect=IOError("Permission denied")):
         response = client.get('/secrets/database/password', headers={'X-Auth-Token': 'test_auth_token'})
         assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
         assert "error" in response.json
