@@ -22,8 +22,14 @@ def create_app() -> Flask:
     app.register_blueprint(secrets_bp)
 
     # ログ設定
-    log_dir = Path("/app/logs")
-    log_dir.mkdir(parents=True, exist_ok=True)
+    log_dir = Path(os.environ.get("LOG_DIR", "/app/logs"))
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+    except PermissionError:
+        # ローカル環境などで /app に権限がない場合のフォールバック
+        log_dir = Path("logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+    
     file_handler = RotatingFileHandler(
         log_dir / "secrets.log", maxBytes=10 * 1024 * 1024, backupCount=5
     )

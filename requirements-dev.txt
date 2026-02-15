@@ -11,3 +11,6 @@ types-requests>=2.31.0
 types-PyYAML>=6.0.0
 bandit>=1.7.5
 pydocstyle>=6.3.0
+Flask>=2.3.0
+cryptography>=42.0.0
+PyYAML>=6.0.0

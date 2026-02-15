@@ -1,8 +1,9 @@
 import secrets as py_secrets
 from pathlib import Path
+import os
 from flask import current_app
 
-TOKEN_DIR = Path("/app/tokens")
+TOKEN_DIR = Path(os.environ.get("TOKEN_DIR", "/app/tokens"))
 DATABASE_TOKEN_FILE = TOKEN_DIR / "database_token.txt"
 BACKEND_TOKEN_FILE = TOKEN_DIR / "backend_token.txt"
 
