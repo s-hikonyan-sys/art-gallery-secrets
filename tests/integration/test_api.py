@@ -6,6 +6,7 @@ import os
 
 # Flaskアプリケーションとカスタム例外をインポート
 from app import app, BACKEND_TOKEN_FILE, APIError, UnauthorizedError, ServiceMisconfiguredError, PasswordNotFoundError
+from config import Config
 
 @pytest.fixture
 def client():
@@ -27,10 +28,6 @@ def setup_config_for_decryption(tmp_path):
     config_dir = tmp_path / "config"
     config_dir.mkdir()
 
-    # secrets.py (Configが依存する) のモック
-    # このテストでは直接SecretManagerの動作をテストしないため、Configがパスワードを返すようにする
-    # 実際のSecretManagerのテストは別途実施
-    
     # config/__init__.py が参照するパスを設定
     mock_config_path = config_dir / "config.yaml"
     mock_secrets_path = config_dir / "secrets.yaml.encrypted"
@@ -41,17 +38,16 @@ def setup_config_for_decryption(tmp_path):
     mock_auth_token_path.write_text("test_auth_token")
 
     with (
-        patch('app.config.CONFIG_FILE', mock_config_path),
-        patch('app.config.SECRETS_FILE', mock_secrets_path),
+        patch('config.CONFIG_FILE', mock_config_path),
+        patch('config.SECRETS_FILE', mock_secrets_path),
         patch('app.BACKEND_TOKEN_FILE', mock_auth_token_path),
-        patch('app.config.SecretManager') as MockSecretManager
+        patch('config.secrets.SecretManager') as MockSecretManager
     ):
         # SecretManager.decryptの戻り値をモック
         mock_instance = MockSecretManager.return_value
         mock_instance.decrypt.return_value = "decrypted_test_password"
 
         # Config._config の初期化を強制
-        # Config.load_app_config()を呼び出すことで、パスワードが設定される
         Config.load_app_config()
         yield
 
@@ -99,7 +95,7 @@ def test_get_database_password_empty_token_file(client, mock_auth_token_file, se
 
 def test_get_database_password_decryption_error(client, mock_auth_token_file):
     # Config._load_config()内で復号エラーが発生するケースをモック
-    with patch('app.config.Config._load_config', side_effect=Exception("Decryption failed")):
+    with patch('config._load_config', side_effect=Exception("Decryption failed")):
         response = client.get('/secrets/database/password', headers={'X-Auth-Token': 'test_auth_token'})
         assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
         assert "error" in response.json
@@ -110,3 +106,22 @@ def test_get_database_password_not_found(client, mock_auth_token_file):
         response = client.get('/secrets/database/password', headers={'X-Auth-Token': 'test_auth_token'})
         assert response.status_code == HTTPStatus.NOT_FOUND
         assert "error" in response.json
+
+def test_generate_runtime_tokens(tmp_path):
+    # TOKENS_DIR をテスト用の一時ディレクトリに差し替えてテスト
+    mock_tokens_dir = tmp_path / "tokens"
+    mock_tokens_dir.mkdir()
+    mock_backend_token_file = mock_tokens_dir / "backend_token.txt"
+    mock_database_token_file = mock_tokens_dir / "database_token.txt"
+
+    with (
+        patch('app.BACKEND_TOKEN_FILE', mock_backend_token_file),
+        patch('app.DATABASE_TOKEN_FILE', mock_database_token_file)
+    ):
+        from app import generate_runtime_tokens
+        generate_runtime_tokens()
+
+        assert mock_backend_token_file.exists()
+        assert mock_database_token_file.exists()
+        assert len(mock_backend_token_file.read_text()) == 64
+        assert len(mock_database_token_file.read_text()) == 64
