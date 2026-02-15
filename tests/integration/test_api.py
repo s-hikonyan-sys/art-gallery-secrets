@@ -33,7 +33,13 @@ def setup_config_for_decryption(tmp_path):
     mock_secrets_path = config_dir / "secrets.yaml.encrypted"
     mock_auth_token_path = config_dir / "auth_token.txt"
 
-    mock_config_path.write_text("secret_key: 'test_secret_key'")
+    mock_config_path.write_text("""
+server:
+  port: 8080
+  flask_env: testing
+  debug: true
+secret_key: 'test_secret_key'
+""")
     mock_secrets_path.write_text("database:\n  password: 'encrypted:test_encrypted_password'")
     mock_auth_token_path.write_text("test_auth_token")
 
@@ -94,8 +100,8 @@ def test_get_database_password_empty_token_file(client, mock_auth_token_file, se
     assert "error" in response.json
 
 def test_get_database_password_decryption_error(client, mock_auth_token_file):
-    # Config._load_config()内で復号エラーが発生するケースをモック
-    with patch('config._load_config', side_effect=Exception("Decryption failed")):
+    # Config._load_all_config()内で復号エラーが発生するケースをモック
+    with patch('config._load_all_config', side_effect=Exception("Decryption failed")):
         response = client.get('/secrets/database/password', headers={'X-Auth-Token': 'test_auth_token'})
         assert response.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
         assert "error" in response.json
