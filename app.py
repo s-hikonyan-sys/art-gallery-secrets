@@ -10,6 +10,8 @@ from config import Config
 from routes import secrets_bp, health_bp
 from services.token_service import TokenService
 
+DEV_MODE = os.environ.get("DEV_MODE", "false").lower() == "true"
+
 def create_app() -> Flask:
     """Flaskアプリケーションのファクトリ."""
     # 設定の読み込み
@@ -67,6 +69,9 @@ def monitor_shutdown():
         time.sleep(5)
 
 if __name__ == "__main__":
-    # シャットダウン監視スレッドを開始
-    threading.Thread(target=monitor_shutdown, daemon=True).start()
+    if not DEV_MODE:
+        # 本番モードのみ自動終了スレッドを起動
+        threading.Thread(target=monitor_shutdown, daemon=True).start()
+    else:
+        app.logger.info("DEV_MODE=true: auto-shutdown disabled. Tokens will not be consumed.")
     app.run(host="0.0.0.0", port=5000, debug=Config.DEBUG)

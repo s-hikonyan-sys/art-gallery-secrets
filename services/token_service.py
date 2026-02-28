@@ -4,6 +4,7 @@ import os
 from flask import current_app
 
 TOKEN_DIR = Path(os.environ.get("TOKEN_DIR", "/app/tokens"))
+DEV_MODE = os.environ.get("DEV_MODE", "false").lower() == "true"
 DATABASE_TOKEN_FILE = TOKEN_DIR / "database_token.txt"
 BACKEND_TOKEN_FILE = TOKEN_DIR / "backend_token.txt"
 
@@ -21,13 +22,20 @@ class TokenService:
 
     @staticmethod
     def verify_and_consume_token(provided_token: str) -> bool:
-        """トークンを検証し、正しければファイルを削除してTrueを返す."""
+        """トークンを検証し、正しければTrueを返す.
+
+        DEV_MODE=false（デフォルト）: トークンファイルを削除して再利用不可にする（本番動作）
+        DEV_MODE=true: トークンファイルを削除せず再利用可能にする（ローカル開発用）
+        """
         for token_file in [DATABASE_TOKEN_FILE, BACKEND_TOKEN_FILE]:
             if token_file.exists():
                 stored_token = token_file.read_text().strip()
                 if py_secrets.compare_digest(stored_token, provided_token):
-                    token_file.unlink()
-                    current_app.logger.info(f"Consumed and deleted token file: {token_file.name}")
+                    if not DEV_MODE:
+                        token_file.unlink()
+                        current_app.logger.info(f"Consumed and deleted token file: {token_file.name}")
+                    else:
+                        current_app.logger.info(f"Verified token (dev mode, not consumed): {token_file.name}")
                     return True
         return False
 
