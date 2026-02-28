@@ -8,7 +8,7 @@ from .secrets import SecretManager
 
 # 設定ファイルのパス
 APP_ROOT = Path(os.environ.get("APP_ROOT", "/app"))
-CONFIG_DIR = APP_ROOT / "config"
+CONFIG_DIR = Path(os.environ.get("SECRETS_CONFIG_DIR", str(APP_ROOT / "secrets_config")))
 CONFIG_FILE = CONFIG_DIR / "config.yaml"
 SECRETS_FILE = CONFIG_DIR / "secrets.yaml.encrypted"
 
