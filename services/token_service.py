@@ -54,3 +54,10 @@ class TokenService:
         """全てのトークンファイルが削除されたか確認する."""
         return not DATABASE_TOKEN_FILE.exists() and not BACKEND_TOKEN_FILE.exists()
 
+    @staticmethod
+    def delete_remaining_tokens() -> None:
+        """残っているトークンファイルを削除する（タイムアウトによる自滅前に呼ぶ）."""
+        for token_file in [DATABASE_TOKEN_FILE, BACKEND_TOKEN_FILE]:
+            if token_file.exists():
+                token_file.unlink(missing_ok=True)
+

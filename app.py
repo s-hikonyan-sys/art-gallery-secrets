@@ -63,7 +63,8 @@ def monitor_shutdown():
             
         # タイムアウトチェック
         if time.time() - start_time > timeout:
-            app.logger.info("Token lifetime expired. Shutting down secrets-api.")
+            app.logger.info("Token lifetime expired. Cleaning up remaining tokens and shutting down.")
+            TokenService.delete_remaining_tokens()
             os._exit(0)
             
         time.sleep(5)
